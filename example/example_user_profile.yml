@@ -1,0 +1,25 @@
+services:
+  - service_name: MuSimEndpoint
+    protocol: http
+    response_content_type: ignore
+    hosts:
+      - 192.168.178.2:50100
+    common_headers:
+      Content-Type: application/json
+
+user_requests:
+  - service_name: MuSimEndpoint
+    method: POST
+    uri:
+      type: COMPOSITE
+      children:
+        - text: '/message?service=service'
+        - type: RANDOMINT
+          text: '1,3'
+          store_as: targetServiceID
+    body:
+      type: COMPOSITE
+      children:
+        - text: '{"sender":"","body":"do","args":""}'
+    expected_response_codes:
+      - 201

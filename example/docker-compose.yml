@@ -1,0 +1,160 @@
+version: "3.9"
+services:
+  influxdb:
+    container_name: influxdb
+    image: influxdb:latest
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - INFLUXDB_DB=muSimDB
+      - INFLUXDB_ADMIN_USER=admin
+      - INFLUXDB_ADMIN_PASSWORD=admin
+
+  chronograf:
+    image: chronograf:latest
+    container_name: chronograf
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - chronograf-storage:/var/lib/chronograf
+    depends_on:
+      - influxdb
+    environment:
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=admin
+
+  etcd:
+    container_name: etcd0
+    image: quay.io/coreos/etcd:latest
+    entrypoint: /usr/local/bin/etcd
+    command:
+      - "--name=etcd"
+      - "--initial-advertise-peer-urls=http://192.168.178.2:2380"
+      - "--listen-peer-urls=http://0.0.0.0:2380"
+      - "--listen-client-urls=http://0.0.0.0:2379,http://0.0.0.0:4001"
+      - "--advertise-client-urls=http://192.168.178.2:2379,http://192.168.178.2:4001"
+      - "--initial-cluster-token=etcd-cluster-1"
+      - "--heartbeat-interval=250"
+      - "--election-timeout=1250"
+      - "--initial-cluster=etcd=http://192.168.178.2:2380"
+      - "--initial-cluster-state=new"
+    ports:
+      - 2379:2379
+      - 2380:2380
+      - 4001:4001
+    volumes:
+      - etcd1:/etcd1_data
+
+  MuSimEndpoint:
+    container_name: MuSimEndpoint
+    image: elleflorio/mu-sim:latest
+    depends_on:
+      - etcd
+      - influxdb
+    entrypoint: mu-sim
+    command: ["start", "MuSimEndpoint", "-w", "none", "-p", "50100"]
+    ports:
+      - 50100:50100
+    environment:
+      - ETCD_ADDR=http://192.168.178.2:2379
+      - INFLUX_ADDR=http://192.168.178.2:8086
+      - INFLUX_USER=admin
+      - INFLUX_PWD=admin
+      - HostIP=192.168.178.2
+
+  service1:
+    container_name: service1
+    image: elleflorio/mu-sim:latest
+    depends_on:
+      - etcd
+      - MuSimEndpoint
+      - influxdb
+    entrypoint: mu-sim
+    command: ["start", "service1", "-d", "service3", "-d", "service4", "-p" , "50101"]
+    ports: 
+      - 50101:50101
+    environment:
+      - ETCD_ADDR=http://192.168.178.2:2379
+      - HostIP=192.168.178.2
+
+  service2:
+    container_name: service2
+    image: elleflorio/mu-sim:latest
+    depends_on:
+      - etcd
+      - MuSimEndpoint
+      - influxdb
+    entrypoint: mu-sim
+    command: ["start", "service2", "-w", "low", "-d", "service3", "-d", "service4", "-p" , "50102"]
+    ports: 
+      - 50102:50102
+    environment:
+      - ETCD_ADDR=http://192.168.178.2:2379
+      - HostIP=192.168.178.2
+
+  service3:
+    container_name: service3
+    image: elleflorio/mu-sim:latest
+    depends_on:
+      - etcd
+      - MuSimEndpoint
+      - influxdb
+    entrypoint: mu-sim
+    command: ["start", "service3", "-p" , "50103"]
+    ports: 
+      - 50103:50103
+    environment:
+      - ETCD_ADDR=http://192.168.178.2:2379
+      - HostIP=192.168.178.2
+
+  service4:
+    container_name: service4
+    image: elleflorio/mu-sim:latest
+    depends_on:
+      - etcd
+      - MuSimEndpoint
+      - influxdb
+    entrypoint: mu-sim
+    command: ["start", "service4", "-w", "low", "-p" , "50104"]
+    ports: 
+      - 50104:50104
+    environment:
+      - ETCD_ADDR=http://192.168.178.2:2379
+      - HostIP=192.168.178.2
+
+
+  loadgenerator-director:
+    container_name: loadgenerator-director
+    image: loadgenerator-director
+    entrypoint: java
+    command:
+      [
+        "-jar",
+        "/opt/httploadgenerator/httploadgenerator.jar",
+        "--ip",
+        "192.168.178.2",
+      ]
+    ports:
+      - 8080:8080
+    environment:
+      - LOADGENERATOR_IPS=192.168.178.2
+      - INFLUXDB_URL=http://192.168.178.2:8086
+      - RUNMODE=webdirector
+
+  loadgenerator-slave:
+    container_name: loadgenerator-slave
+    image: loadgenerator-slave
+    depends_on:
+      - loadgenerator-director
+    entrypoint: java
+    command: ["-jar", "/opt/httploadgenerator/httploadgenerator.jar"]
+    ports: 
+      - 24225:24225
+
+volumes:
+  etcd1:
+  influxdb-storage:
+  chronograf-storage:
