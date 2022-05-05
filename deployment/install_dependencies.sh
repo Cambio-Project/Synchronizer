@@ -8,7 +8,7 @@ apt-get -y install wget curl python3-pip openjdk-11-jre
 
 # chaos toolkit setup -works
 pip3 install --no-cache-dir -q -U pip3
-pip3 install --no-cache-dir chaostoolkit
+pip3 install --no-cache-dir -r requirements.txt
 
 
 # # go setup- works
@@ -27,12 +27,16 @@ export PATH=$PATH:/usr/lib/pumba/
 
 #InfluxDB -works
 cd ~
-if [[ -z "${INFLUXDB_ADD}" ]]; then
-    wget https://dl.influxdata.com/influxdb/releases/influxdb_1.8.3_amd64.deb
-    dpkg -i influxdb_1.8.3_amd64.deb
-    service influxdb start
-    export INFLUXDB_ADD=http://localhost:8086
-else
-    echo -e "\e[1;33m[WARNING] This container will try to use a InfluxDB at ${INFLUXDB_ADD}"
-    echo -e "          Consider setting the INFLUXDB_ADD enviornment variable to change this. \e[1;0m"
-fi
+wget https://dl.influxdata.com/influxdb/releases/influxdb_1.8.3_amd64.deb
+dpkg -i influxdb_1.8.3_amd64.deb
+service influxdb start
+
+# if [[ -z "${INFLUXDB_ADD}" ]]; then
+#     wget https://dl.influxdata.com/influxdb/releases/influxdb_1.8.3_amd64.deb
+#     dpkg -i influxdb_1.8.3_amd64.deb
+#     service influxdb start
+#     export INFLUXDB_ADD=http://localhost:8086
+# else
+#     echo -e "\e[1;33m[WARNING] This container will try to use a InfluxDB at ${INFLUXDB_ADD}"
+#     echo -e "          Consider setting the INFLUXDB_ADD enviornment variable to change this. \e[1;0m"
+# fi
